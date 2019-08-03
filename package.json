@@ -132,7 +132,7 @@
       "react-app"
     ]
   },
-  "homepage": "https://diablo.devs.space/diablo",
+  "homepage": "https://diablo.devs.space",
   "devDependencies": {
     "exports-loader": "^0.7.0",
     "gh-pages": "^2.0.1",

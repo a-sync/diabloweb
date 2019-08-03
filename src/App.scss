@@ -8,6 +8,11 @@ body, #root, .App {
 }
 .App {
   background-color: #000;
+  background-image: url(./icons/bg.jpg);
+  background-position: center center;
+  &.started {
+    background-image: none;
+  }
   &.dropping {
     background-color: #111;
   }
@@ -96,12 +101,14 @@ body, #root, .App {
   }
 
   .start {
-    border: 1px solid #888;
-    padding: 12px;
+    padding: 160px 40px 20px 40px;
     color: #fff;
     font-size: 18px;
     text-align: center;
-    background: #000;
+    background-image: url(./icons/logo.gif);
+    background-position: center top;
+    background-repeat: no-repeat;
+
     p {
       margin: 10px 0;
     }
