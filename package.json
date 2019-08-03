@@ -1,6 +1,6 @@
 {
   "name": "diabloweb",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "dependencies": {
     "@babel/core": "7.4.3",
@@ -132,7 +132,7 @@
       "react-app"
     ]
   },
-  "homepage": "https://d07riv.github.io/diabloweb",
+  "homepage": "https://diablo.devs.space/diablo",
   "devDependencies": {
     "exports-loader": "^0.7.0",
     "gh-pages": "^2.0.1",

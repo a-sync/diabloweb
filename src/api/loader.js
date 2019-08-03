@@ -1,6 +1,7 @@
 import Worker from './game.worker.js';
 import init_sound from './sound';
 import load_spawn from './load_spawn';
+import load_diabdat from './load_diabdat';
 
 function onRender(api, ctx, {bitmap, images, text, clip, belt}) {
   if (bitmap) {
@@ -55,7 +56,14 @@ async function do_load_game(api, audio, mpq) {
       fs.files.delete('spawn.mpq');
     }
   } else {
-    await load_spawn(api, fs);
+    await load_diabdat(api, fs);
+
+    if (fs.files.get('diabdat.mpq')) {
+      spawn = false;
+      fs.files.delete('spawn.mpq');
+    } else {
+      await load_spawn(api, fs);
+    }
   }
 
   let context = null, offscreen = false;

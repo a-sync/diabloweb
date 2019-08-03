@@ -558,7 +558,8 @@ class App extends React.Component {
                 <label htmlFor="loadFile" className="startButton">Select MPQ</label>
                 <input accept=".mpq" type="file" id="loadFile" style={{display: "none"}} onChange={this.parseFile}/>
               </form>
-              <span className="startButton" onClick={() => this.start()}>Play Shareware</span>
+
+              <span className="startButton" onClick={() => this.start()}>Play</span>
             </div>
           )}
         </div>
