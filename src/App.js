@@ -1,13 +1,19 @@
 import React from 'react';
 import './App.scss';
 import classNames from 'classnames';
+import ReactGA from 'react-ga';
 
 import create_fs from './fs';
 import load_game from './api/loader';
 import { SpawnSize } from './api/load_spawn';
 
+if (process.env.NODE_ENV === 'production') {
+  ReactGA.initialize('UA-43123589-6');
+  ReactGA.pageview('/');
+}
+
 function reportLink(e, retail) {
-  const message = e.stack || e.message;
+  const message = e.stack || e.message || "Unknown error";
   const url = new URL("https://github.com/d07RiV/diabloweb/issues/new");
   url.searchParams.set("body",
 `**Description:**
@@ -115,7 +121,7 @@ class App extends React.Component {
   }
 
   onError(message, stack) {
-    this.setState({error: {message, stack}});
+    this.setState(({error}) => !error && {error: {message, stack}});
   }
 
   openKeyboard(open) {
@@ -146,7 +152,9 @@ class App extends React.Component {
   }
 
   onExit() {
-    window.location = window.location;
+    if (!this.state.error) {
+      window.location.reload();
+    }
   }
 
   setCurrentSave(name) {
@@ -204,7 +212,15 @@ class App extends React.Component {
     document.removeEventListener("dragleave", this.onDragLeave, true);
     this.setState({dropping: 0});
 
-    this.setState({loading: true, retail: !!(file && file.name.match(/^diabdat\.mpq$/i))});
+    const retail = !!(file && file.name.match(/^diabdat\.mpq$/i));
+    if (process.env.NODE_ENV === 'production') {
+      ReactGA.event({
+        category: 'Game',
+        action: retail ? 'Start Retail' : 'Start Shareware',
+      });
+    }
+
+    this.setState({loading: true, retail});
 
     load_game(this, file).then(game => {
       this.game = game;
