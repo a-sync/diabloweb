@@ -1,6 +1,8 @@
 import React from 'react';
 import './App.scss';
 import classNames from 'classnames';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';	
+import { faTimes, faDownload } from '@fortawesome/free-solid-svg-icons';
 import getPlayerName from './api/savefile';
 
 import { mapStackTrace } from 'sourcemapped-stacktrace';
@@ -9,8 +11,10 @@ import create_fs from './fs';
 import load_game from './api/loader';
 import { SpawnSizes } from './api/load_spawn';
 
-window.Peer = Peer;
 import Peer from 'peerjs';
+
+window.Peer = Peer;
+
 function reportLink(e, retail) {
   const message = (e.message || "Unknown error") + (e.stack ? "\n" + e.stack : "");
   const url = new URL("https://github.com/d07RiV/diabloweb/issues/new");
@@ -292,7 +296,7 @@ class App extends React.Component {
     document.removeEventListener("dragleave", this.onDragLeave, true);
     this.setState({dropping: 0});
 
-    const retail = !!(file && file.name.match(/^diabdat\.mpq$/i));
+    const retail = true;
 
     this.setState({loading: true, retail});
 
