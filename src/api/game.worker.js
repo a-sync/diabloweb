@@ -4,8 +4,10 @@ import SpawnBinary from './DiabloSpawn.wasm';
 import SpawnModule from './DiabloSpawn.jscc';
 import axios from 'axios';
 
-const DiabloSize = 1316452;
-const SpawnSize = 1196648;
+import websocket_open from './websocket';
+
+const DiabloSize = 1466809;
+const SpawnSize = 1337416;
 
 /* eslint-disable-next-line no-restricted-globals */
 const worker = self;
@@ -16,10 +18,72 @@ let files = null;
 let renderBatch = null;
 let drawBelt = null;
 let is_spawn = false;
+let websocket = null;
+
+function onError(err, action="error") {
+  if (err instanceof Error) {
+    worker.postMessage({action, error: err.toString(), stack: err.stack});
+  } else {
+    worker.postMessage({action, error: err.toString()});
+  }
+}
+
+const ChunkSize = 1 << 20;
+class RemoteFile {
+  constructor(url) {
+    const request = new XMLHttpRequest();
+    request.open('HEAD', url, false);
+    request.send();
+    if (request.status < 200 || request.status >= 300) {
+      throw Error('Failed to load remote file');
+    }
+    this.byteLength = parseInt(request.getResponseHeader('Content-Length'));
+
+    this.url = url;
+
+    this.buffer = new Uint8Array(this.byteLength);
+    this.chunks = new Uint8Array(((this.byteLength + ChunkSize - 1) >> 20) | 0);
+  }
+
+  subarray(start, end) {
+    let chunk0 = (start / ChunkSize) | 0;
+    let chunk1 = ((end + ChunkSize - 1) / ChunkSize) | 0;
+    let missing0 = chunk1, missing1 = chunk0;
+    for (let i = chunk0; i < chunk1; ++i) {
+      if (!this.chunks[i]) {
+        missing0 = Math.min(missing0, i);
+        missing1 = Math.max(missing1, i);
+      }
+    }
+    if (missing0 <= missing1) {
+      const request = new XMLHttpRequest();
+      request.open('GET', this.url, false);
+      request.setRequestHeader('Range', `bytes=${missing0 * ChunkSize}-${Math.min(missing1 * ChunkSize + ChunkSize - 1, this.byteLength - 1)}`);
+      request.responseType = 'arraybuffer';
+      request.send();
+      if (request.status < 200 || request.status >= 300) {
+        throw Error('Failed to load remote file');
+      } else {
+        const header = request.getResponseHeader('Content-Range');
+        let m, start = 0;
+        if (header && (m = header.match(/bytes (\d+)-(\d+)\/(\d+)/))) {
+          start = parseInt(m[1]);
+        }
+        this.buffer.set(new Uint8Array(request.response), start);
+        chunk0 = ((start + ChunkSize - 1) / ChunkSize) | 0;
+        chunk1 = ((start + request.response.byteLength + ChunkSize - 1) / ChunkSize) | 0;
+        for (let i = chunk0; i < chunk1; ++i) {
+          this.chunks[i] = 1;
+        }
+      }
+    }
+    return this.buffer.subarray(start, end);
+  }
+}
 
 const DApi = {
   exit_error(error) {
-    worker.postMessage({action: "error", error});
+    throw Error(error);
   },
 
   exit_game() {
@@ -36,7 +100,7 @@ const DApi = {
   get_file_contents(path, array, offset) {
     const data = files.get(path.toLowerCase());
     if (data) {
-      array.set(data.subarray(offset, offset + array.length));
+      array.set(data.subarray(offset, offset + array.byteLength));
     }
   },
   put_file_contents(path, array) {
@@ -56,14 +120,45 @@ const DApi = {
   set_cursor(x, y) {
     worker.postMessage({action: "cursor", x, y});
   },
-  open_keyboard() {
-    worker.postMessage({action: "keyboard", open: true});
+  open_keyboard(...args) {
+    worker.postMessage({action: "keyboard", rect: [...args]});
   },
   close_keyboard() {
-    worker.postMessage({action: "keyboard", open: false});
+    worker.postMessage({action: "keyboard", rect: null});
+  },
+
+  use_websocket(flag) {
+    if (flag) {
+      if (!websocket || websocket.readyState !== 1) {
+        const sock = websocket = websocket_open('wss://diablo.rivsoft.net/websocket', data => {
+          if (websocket === sock) {
+            try_api(() => {
+              const ptr = wasm._DApi_AllocPacket(data.byteLength);
+              wasm.HEAPU8.set(new Uint8Array(data), ptr);
+            });
+          }
+        }, code => {
+          if (typeof code !== "number") {
+            throw code;
+          } else {
+            call_api("SNet_WebsocketStatus", code);
+          }
+        });
+      } else {
+        call_api("SNet_WebsocketStatus", 0);
+      }
+    } else {
+      if (websocket) {
+        websocket.close();
+      }
+      websocket = null;
+    }
+  },
+  websocket_closed() {
+    return websocket ? websocket.readyState !== 1 : false;
   },
 };
-
+/*
 let frameTime = 0, lastTime = 0;
 function getFPS() {
   const time = performance.now();
@@ -74,7 +169,7 @@ function getFPS() {
   lastTime = time;
   return frameTime ? 1000.0 / frameTime : 0.0;
 }
-
+*/
 const DApi_renderLegacy = {
   draw_begin() {
     renderBatch = {
@@ -147,18 +242,18 @@ const DApi_renderOffscreen = {
 
 let audioBatch = null, audioTransfer = null;
 let maxSoundId = 0, maxBatchId = 0;
-["create_sound", "duplicate_sound"].forEach(func => {
+["create_sound_raw", "create_sound", "duplicate_sound"].forEach(func => {
   DApi[func] = function(...params) {
     if (audioBatch) {
       maxBatchId = params[0] + 1;
       audioBatch.push({func, params});
-      if (func === "create_sound") {
+      if (func !== "duplicate_sound") {
         audioTransfer.push(params[1].buffer);
       }
     } else {
       maxSoundId = params[0] + 1;
       const transfer = [];
-      if (func === "create_sound") {
+      if (func !== "duplicate_sound") {
         transfer.push(params[1].buffer);
       }
       worker.postMessage({action: "audio", func, params}, transfer);
@@ -175,24 +270,63 @@ let maxSoundId = 0, maxBatchId = 0;
   }
 });
 
+let packetBatch = null;
+DApi.websocket_send = function(data) {
+  if (websocket) {
+    websocket.send(data);
+  } else if (packetBatch) {
+    packetBatch.push(data.slice().buffer);
+  } else {
+    worker.postMessage({action: "packet", buffer: data});
+  }
+};
+
 worker.DApi = DApi;
 
 let wasm = null;
 
-function call_api(func, ...params) {
+function try_api(func) {
   try {
-    audioBatch = [];
-    audioTransfer = [];
-    wasm["_" + func](...params);
-    if (audioBatch.length) {
-      maxSoundId = maxBatchId;
-      worker.postMessage({action: "audioBatch", batch: audioBatch}, audioTransfer);
+    func();
+  } catch (e) {
+    onError(e);
+  }
+}
+
+function call_api(func, ...params) {
+  try_api(() => {
+    const nested = (audioBatch != null);
+    if (!nested) {
+      audioBatch = [];
+      audioTransfer = [];
+      packetBatch = [];
+    }
+    if (func !== "text") {
+      wasm["_" + func](...params);
+    } else {
+      const ptr = wasm._DApi_SyncTextPtr();
+      const text = params[0];
+      const length = Math.min(text.length, 255);
+      const heap = wasm.HEAPU8;
+      for (let i = 0; i < length; ++i) {
+        heap[ptr + i] = text.charCodeAt(i);
+      }
+      heap[ptr + length] = 0;
+      wasm._DApi_SyncText(params[1]);
+    }
+    if (!nested) {
+      if (audioBatch.length) {
+        maxSoundId = maxBatchId;
+        worker.postMessage({action: "audioBatch", batch: audioBatch}, audioTransfer);
+      }
+      if (packetBatch.length) {
+        worker.postMessage({action: "packetBatch", batch: packetBatch}, packetBatch);
+      }
       audioBatch = null;
       audioTransfer = null;
+      packetBatch = null;
     }
-  } catch (e) {
-    worker.postMessage({action: "error", error: e.message || (e.constructor && e.constructor.name), stack: e.stack});
-  }
+  });
 }
 
 function progress(text, loaded, total) {
@@ -237,6 +371,14 @@ async function init_game(mpq, spawn, offscreen) {
     Object.assign(DApi, DApi_renderLegacy);
   }
 
+  if (!mpq) {
+    const name = (spawn ? 'spawn.mpq' : 'diabdat.mpq');
+    if (!files.has(name)) {
+      // This should never happen, but we do support remote loading
+      files.set(name, new RemoteFile(`${process.env.PUBLIC_URL}/${name}`));
+    }
+  }
+
   progress("Loading...");
   let mpqLoaded = 0, mpqTotal = (mpq ? mpq.size : 0), wasmLoaded = 0, wasmTotal = (spawn ? SpawnSize : DiabloSize);
   const wasmWeight = 5;
@@ -261,6 +403,7 @@ async function init_game(mpq, spawn, offscreen) {
 
   const vers = process.env.VERSION.match(/(\d+)\.(\d+)\.(\d+)/);
 
+  wasm._SNet_InitWebsocket();
   wasm._DApi_Init(Math.floor(performance.now()), offscreen ? 1 : 0, parseInt(vers[1]), parseInt(vers[2]), parseInt(vers[3]));
 
   setInterval(() => {
@@ -274,10 +417,25 @@ worker.addEventListener("message", ({data}) => {
     files = data.files;
     init_game(data.mpq, data.spawn, data.offscreen).then(
       () => worker.postMessage({action: "loaded"}),
-      e => worker.postMessage({action: "failed", error: e.message || e.name || (e.constructor && e.constructor.name), stack: e.stack}));
+      e => onError(e, "failed"));
     break;
   case "event":
     call_api(data.func, ...data.params);
     break;
+  case "packet":
+    try_api(() => {
+      const ptr = wasm._DApi_AllocPacket(data.buffer.byteLength);
+      wasm.HEAPU8.set(new Uint8Array(data.buffer), ptr);
+    });
+    break;
+  case "packetBatch":
+    try_api(() => {
+      for (let packet of data.batch) {
+        const ptr = wasm._DApi_AllocPacket(packet.byteLength);
+        wasm.HEAPU8.set(new Uint8Array(packet), ptr);
+      }
+    });
+    break;
+  default:
   }
 });

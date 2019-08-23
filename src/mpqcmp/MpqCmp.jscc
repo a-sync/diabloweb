@@ -1,9 +1,9 @@
 
-var DiabloSpawn = (function() {
+var MpqCmp = (function() {
   var _scriptDir = typeof document !== 'undefined' && document.currentScript ? document.currentScript.src : undefined;
   return (
-function(DiabloSpawn) {
-  DiabloSpawn = DiabloSpawn || {};
+function(MpqCmp) {
+  MpqCmp = MpqCmp || {};
 
 // Copyright 2010 The Emscripten Authors.  All rights reserved.
 // Emscripten is available under two separate licenses, the MIT license and the
@@ -23,7 +23,7 @@ function(DiabloSpawn) {
 // after the generated code, you will need to define   var Module = {};
 // before the code. Then that object will be used in the code, and you
 // can continue to use Module afterwards as well.
-var Module = typeof DiabloSpawn !== 'undefined' ? DiabloSpawn : {};
+var Module = typeof MpqCmp !== 'undefined' ? MpqCmp : {};
 
 // --pre-jses are emitted after the Module integration code, so that they can
 // refer to Module (if they choose; they can also define Module)
@@ -1214,11 +1214,11 @@ function updateGlobalBufferViews() {
 
 
 var STATIC_BASE = 1024,
-    STACK_BASE = 1850928,
+    STACK_BASE = 127296,
     STACKTOP = STACK_BASE,
-    STACK_MAX = 7093808,
-    DYNAMIC_BASE = 7093808,
-    DYNAMICTOP_PTR = 1850896;
+    STACK_MAX = 5370176,
+    DYNAMIC_BASE = 5370176,
+    DYNAMICTOP_PTR = 127264;
 
 
 
@@ -1464,7 +1464,7 @@ function isDataURI(filename) {
 
 
 
-var wasmBinaryFile = 'DiabloSpawn.wasm';
+var wasmBinaryFile = 'MpqCmp.wasm';
 if (!isDataURI(wasmBinaryFile)) {
   wasmBinaryFile = locateFile(wasmBinaryFile);
 }
@@ -1597,8 +1597,8 @@ Module['asm'] = function(global, env, providedBuffer) {
   ;
   // import table
   env['table'] = wasmTable = new WebAssembly.Table({
-    'initial': 1116,
-    'maximum': 1116,
+    'initial': 402,
+    'maximum': 402,
     'element': 'anyfunc'
   });
   // With the wasm backend __memory_base and __table_base and only needed for
@@ -1617,44 +1617,18 @@ var tempI64;
 
 // === Body ===
 
-var ASM_CONSTS = [function($0) { self.DApi.current_save_id($0); }];
+var ASM_CONSTS = [];
 
-function _emscripten_asm_const_ii(code, a0) {
-  return ASM_CONSTS[code](a0);
-}
-function __api_close_keyboard(){ self.DApi.close_keyboard(); }
-function __api_open_keyboard(x0,y0,x1,y1,len){ self.DApi.open_keyboard(x0, y0, x1, y1, len); }
-function _api_create_sound(id,ptr,size){ self.DApi.create_sound(id, HEAPU8.slice(ptr, ptr + size)); }
-function _api_create_sound_float(id,ptr,samples,channels,rate){ self.DApi.create_sound_raw(id, HEAPF32.slice(ptr / 4, ptr / 4 + samples * channels), samples, channels, rate); }
-function _api_delete_sound(id){ self.DApi.delete_sound(id); }
-function _api_draw_begin(){ self.DApi.draw_begin(); }
-function _api_draw_belt(items){ self.DApi.draw_belt(HEAP32.subarray(items / 4, items / 4 + 8)); }
-function _api_draw_blit(x,y,w,h,ptr){ self.DApi.draw_blit(x, y, w, h, HEAPU8.subarray(ptr, ptr + w * h * 4)); }
-function _api_draw_clip_text(x0,y0,x1,y1){ self.DApi.draw_clip_text(x0, y0, x1, y1); }
-function _api_draw_end(){ self.DApi.draw_end(); }
-function _api_draw_text(x,y,ptr,color){ var end = HEAPU8.indexOf(0, ptr); var text = String.fromCharCode.apply(null, HEAPU8.subarray(ptr, end)); self.DApi.draw_text(x, y, text, color); }
-function _api_duplicate_sound(id,srcId){ self.DApi.duplicate_sound(id, srcId); }
-function _api_exit_game(){ self.DApi.exit_game(); }
-function _api_play_sound(id,volume,pan,loop){ self.DApi.play_sound(id, volume, pan, loop); }
-function _api_set_cursor(x,y){ self.DApi.set_cursor(x, y); }
-function _api_set_volume(id,volume){ self.DApi.set_volume(id, volume); }
-function _api_stop_sound(id){ self.DApi.stop_sound(id); }
-function _api_use_websocket(use){ self.DApi.use_websocket(use); }
-function _api_websocket_closed(){ return self.DApi.websocket_closed(); }
-function _api_websocket_send(ptr,size){ self.DApi.websocket_send(HEAPU8.subarray(ptr, ptr + size)); }
-function _exit_error(err){ var end = HEAPU8.indexOf( 0, err ); var text = String.fromCharCode.apply(null, HEAPU8.subarray( err, end )); self.DApi.exit_error( text ); }
-function _get_file_contents(path,ptr,offset,size){ var end = HEAPU8.indexOf( 0, path); var text = String.fromCharCode.apply(null, HEAPU8.subarray(path, end )); self.DApi.get_file_contents(text, HEAPU8.subarray(ptr, ptr + size), offset); }
-function _get_file_size(path){ var end = HEAPU8.indexOf( 0, path); var text = String.fromCharCode.apply(null, HEAPU8.subarray(path, end )); return self.DApi.get_file_size(text); }
-function _put_file_contents(path,ptr,size){ var end = HEAPU8.indexOf( 0, path); var text = String.fromCharCode.apply(null, HEAPU8.subarray(path, end)); self.DApi.put_file_contents(text, HEAPU8.slice(ptr, ptr + size)); }
-function _remove_file(path){ var end = HEAPU8.indexOf( 0, path); var text = String.fromCharCode.apply(null, HEAPU8.subarray(path, end )); self.DApi.remove_file( text ); }
-function _show_alert(err){ var end = HEAPU8.indexOf( 0, err ); var text = String.fromCharCode.apply( null, HEAPU8.subarray( err, end ) ); self.alert( text ); }
-function _trace_pop(){ if (self.WASM_TRACE) { self.WASM_TRACE.pop(); } }
-function _trace_push(ptr){ var end = HEAPU8.indexOf(0, ptr); var text = String.fromCharCode.apply(null, HEAPU8.subarray(ptr, end)); console.log(text); self.WASM_TRACE = self.WASM_TRACE || []; self.WASM_TRACE.push(text); }
+function _do_error(err){ var end = HEAPU8.indexOf( 0, err ); var text = String.fromCharCode.apply(null, HEAPU8.subarray( err, end )); self.DApi.exit_error( text ); }
+function _do_progress(done,total){ self.DApi.progress(done, total); }
+function _get_file_contents(ptr,offset,size){ self.DApi.get_file_contents(HEAPU8.subarray(ptr, ptr + size), offset); }
+function _put_file_contents(ptr,offset,size){ self.DApi.put_file_contents(HEAPU8.subarray(ptr, ptr + size), offset); }
+function _put_file_size(size){ self.DApi.put_file_size(size); }
 
 
 
-// STATICTOP = STATIC_BASE + 1849904;
-/* global initializers */  __ATINIT__.push({ func: function() { globalCtors() } });
+// STATICTOP = STATIC_BASE + 126272;
+/* global initializers */ /*__ATINIT__.push();*/
 
 
 
@@ -1664,7 +1638,7 @@ function _trace_push(ptr){ var end = HEAPU8.indexOf(0, ptr); var text = String.f
 
 
 /* no memory initializer */
-var tempDoublePtr = 1850912
+var tempDoublePtr = 127280
 
 function copyTempFloat(ptr) { // functions, because inlining this code increases code size too much
   HEAP8[tempDoublePtr] = HEAP8[ptr];
@@ -1788,7 +1762,7 @@ function copyTempDouble(ptr) {
   
       var pointer = ___cxa_is_pointer_type(throwntype);
       // can_catch receives a **, add indirection
-      var buffer = 1850880;
+      var buffer = 127248;
       HEAP32[((buffer)>>2)]=thrown;
       thrown = buffer;
       // The different catch blocks are denoted by different types.
@@ -1818,11 +1792,6 @@ function copyTempDouble(ptr) {
   return ___cxa_find_matching_catch(a0,a1,a2);
   }
 
-
-  function ___cxa_get_exception_ptr(ptr) {
-      // TODO: use info.adjusted?
-      return ptr;
-    }
 
   function ___cxa_pure_virtual() {
       ABORT = true;
@@ -1854,8 +1823,6 @@ function copyTempDouble(ptr) {
 
   function ___gxx_personality_v0() {
     }
-
-  function ___lock() {}
 
 
   
@@ -2006,29 +1973,23 @@ function copyTempDouble(ptr) {
   }
   }
 
-  function ___unlock() {}
-
   function _abort() {
       Module['abort']();
     }
-
-  var _emscripten_asm_const_int=true;
 
   function _emscripten_get_heap_size() {
       return HEAP8.length;
     }
 
-  function _exit(status) {
-      // void _exit(int status);
-      // http://pubs.opengroup.org/onlinepubs/000095399/functions/exit.html
-      exit(status);
-    }
-
    
 
-  function _llvm_eh_typeid_for(type) {
-      return type;
-    }
+  
+  function _llvm_exp2_f32(x) {
+      return Math.pow(2, x);
+    }function _llvm_exp2_f64(a0
+  /*``*/) {
+  return _llvm_exp2_f32(a0);
+  }
 
   function _llvm_trap() {
       abort('trap!');
@@ -2117,14 +2078,6 @@ function copyTempDouble(ptr) {
   
       return true;
     } 
-
-  function _time(ptr) {
-      var ret = (Date.now()/1000)|0;
-      if (ptr) {
-        HEAP32[((ptr)>>2)]=ret;
-      }
-      return ret;
-    }
 var ASSERTIONS = false;
 
 // Copyright 2017 The Emscripten Authors.  All rights reserved.
@@ -2159,17 +2112,6 @@ function intArrayToString(array) {
 
 // ASM_LIBRARY EXTERN PRIMITIVES: Int8Array,Int32Array
 
-
-function invoke_i(index) {
-  var sp = stackSave();
-  try {
-    return dynCall_i(index);
-  } catch(e) {
-    stackRestore(sp);
-    if (e !== e+0 && e !== 'longjmp') throw e;
-    _setThrew(1, 0);
-  }
-}
 
 function invoke_ii(index,a1) {
   var sp = stackSave();
@@ -2219,6 +2161,17 @@ function invoke_iiiiii(index,a1,a2,a3,a4,a5) {
   var sp = stackSave();
   try {
     return dynCall_iiiiii(index,a1,a2,a3,a4,a5);
+  } catch(e) {
+    stackRestore(sp);
+    if (e !== e+0 && e !== 'longjmp') throw e;
+    _setThrew(1, 0);
+  }
+}
+
+function invoke_iiiiiii(index,a1,a2,a3,a4,a5,a6) {
+  var sp = stackSave();
+  try {
+    return dynCall_iiiiiii(index,a1,a2,a3,a4,a5,a6);
   } catch(e) {
     stackRestore(sp);
     if (e !== e+0 && e !== 'longjmp') throw e;
@@ -2281,50 +2234,6 @@ function invoke_viii(index,a1,a2,a3) {
   }
 }
 
-function invoke_viiii(index,a1,a2,a3,a4) {
-  var sp = stackSave();
-  try {
-    dynCall_viiii(index,a1,a2,a3,a4);
-  } catch(e) {
-    stackRestore(sp);
-    if (e !== e+0 && e !== 'longjmp') throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_viiiii(index,a1,a2,a3,a4,a5) {
-  var sp = stackSave();
-  try {
-    dynCall_viiiii(index,a1,a2,a3,a4,a5);
-  } catch(e) {
-    stackRestore(sp);
-    if (e !== e+0 && e !== 'longjmp') throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_viiiiiii(index,a1,a2,a3,a4,a5,a6,a7) {
-  var sp = stackSave();
-  try {
-    dynCall_viiiiiii(index,a1,a2,a3,a4,a5,a6,a7);
-  } catch(e) {
-    stackRestore(sp);
-    if (e !== e+0 && e !== 'longjmp') throw e;
-    _setThrew(1, 0);
-  }
-}
-
-function invoke_viij(index,a1,a2,a3,a4) {
-  var sp = stackSave();
-  try {
-    dynCall_viij(index,a1,a2,a3,a4);
-  } catch(e) {
-    stackRestore(sp);
-    if (e !== e+0 && e !== 'longjmp') throw e;
-    _setThrew(1, 0);
-  }
-}
-
 function invoke_viji(index,a1,a2,a3,a4) {
   var sp = stackSave();
   try {
@@ -2342,21 +2251,17 @@ var asmLibraryArg = {
   "abort": abort,
   "setTempRet0": setTempRet0,
   "getTempRet0": getTempRet0,
-  "invoke_i": invoke_i,
   "invoke_ii": invoke_ii,
   "invoke_iii": invoke_iii,
   "invoke_iiii": invoke_iiii,
   "invoke_iiiii": invoke_iiiii,
   "invoke_iiiiii": invoke_iiiiii,
+  "invoke_iiiiiii": invoke_iiiiiii,
   "invoke_ji": invoke_ji,
   "invoke_v": invoke_v,
   "invoke_vi": invoke_vi,
   "invoke_vii": invoke_vii,
   "invoke_viii": invoke_viii,
-  "invoke_viiii": invoke_viiii,
-  "invoke_viiiii": invoke_viiiii,
-  "invoke_viiiiiii": invoke_viiiiiii,
-  "invoke_viij": invoke_viij,
   "invoke_viji": invoke_viji,
   "___assert_fail": ___assert_fail,
   "___cxa_allocate_exception": ___cxa_allocate_exception,
@@ -2366,7 +2271,6 @@ var asmLibraryArg = {
   "___cxa_find_matching_catch_2": ___cxa_find_matching_catch_2,
   "___cxa_find_matching_catch_3": ___cxa_find_matching_catch_3,
   "___cxa_free_exception": ___cxa_free_exception,
-  "___cxa_get_exception_ptr": ___cxa_get_exception_ptr,
   "___cxa_pure_virtual": ___cxa_pure_virtual,
   "___cxa_throw": ___cxa_throw,
   "___cxa_uncaught_exceptions": ___cxa_uncaught_exceptions,
@@ -2374,51 +2278,24 @@ var asmLibraryArg = {
   "___exception_deAdjust": ___exception_deAdjust,
   "___exception_decRef": ___exception_decRef,
   "___gxx_personality_v0": ___gxx_personality_v0,
-  "___lock": ___lock,
   "___resumeException": ___resumeException,
   "___setErrNo": ___setErrNo,
   "___syscall140": ___syscall140,
   "___syscall146": ___syscall146,
   "___syscall54": ___syscall54,
   "___syscall6": ___syscall6,
-  "___unlock": ___unlock,
-  "__api_close_keyboard": __api_close_keyboard,
-  "__api_open_keyboard": __api_open_keyboard,
   "_abort": _abort,
-  "_api_create_sound": _api_create_sound,
-  "_api_create_sound_float": _api_create_sound_float,
-  "_api_delete_sound": _api_delete_sound,
-  "_api_draw_begin": _api_draw_begin,
-  "_api_draw_belt": _api_draw_belt,
-  "_api_draw_blit": _api_draw_blit,
-  "_api_draw_clip_text": _api_draw_clip_text,
-  "_api_draw_end": _api_draw_end,
-  "_api_draw_text": _api_draw_text,
-  "_api_duplicate_sound": _api_duplicate_sound,
-  "_api_exit_game": _api_exit_game,
-  "_api_play_sound": _api_play_sound,
-  "_api_set_cursor": _api_set_cursor,
-  "_api_set_volume": _api_set_volume,
-  "_api_stop_sound": _api_stop_sound,
-  "_api_use_websocket": _api_use_websocket,
-  "_api_websocket_closed": _api_websocket_closed,
-  "_api_websocket_send": _api_websocket_send,
-  "_emscripten_asm_const_ii": _emscripten_asm_const_ii,
+  "_do_error": _do_error,
+  "_do_progress": _do_progress,
   "_emscripten_get_heap_size": _emscripten_get_heap_size,
   "_emscripten_memcpy_big": _emscripten_memcpy_big,
   "_emscripten_resize_heap": _emscripten_resize_heap,
-  "_exit": _exit,
-  "_exit_error": _exit_error,
   "_get_file_contents": _get_file_contents,
-  "_get_file_size": _get_file_size,
-  "_llvm_eh_typeid_for": _llvm_eh_typeid_for,
+  "_llvm_exp2_f32": _llvm_exp2_f32,
+  "_llvm_exp2_f64": _llvm_exp2_f64,
   "_llvm_trap": _llvm_trap,
   "_put_file_contents": _put_file_contents,
-  "_remove_file": _remove_file,
-  "_show_alert": _show_alert,
-  "_time": _time,
-  "_trace_pop": _trace_pop,
-  "_trace_push": _trace_push,
+  "_put_file_size": _put_file_size,
   "abortOnCannotGrowMemory": abortOnCannotGrowMemory,
   "emscripten_realloc_buffer": emscripten_realloc_buffer,
   "flush_NO_FILESYSTEM": flush_NO_FILESYSTEM,
@@ -2430,44 +2307,8 @@ var asm =Module["asm"]// EMSCRIPTEN_END_ASM
 (asmGlobalArg, asmLibraryArg, buffer);
 
 Module["asm"] = asm;
-var _DApi_AllocPacket = Module["_DApi_AllocPacket"] = function() {
-  return Module["asm"]["_DApi_AllocPacket"].apply(null, arguments)
-};
-
-var _DApi_Char = Module["_DApi_Char"] = function() {
-  return Module["asm"]["_DApi_Char"].apply(null, arguments)
-};
-
-var _DApi_Init = Module["_DApi_Init"] = function() {
-  return Module["asm"]["_DApi_Init"].apply(null, arguments)
-};
-
-var _DApi_Key = Module["_DApi_Key"] = function() {
-  return Module["asm"]["_DApi_Key"].apply(null, arguments)
-};
-
-var _DApi_Mouse = Module["_DApi_Mouse"] = function() {
-  return Module["asm"]["_DApi_Mouse"].apply(null, arguments)
-};
-
-var _DApi_Render = Module["_DApi_Render"] = function() {
-  return Module["asm"]["_DApi_Render"].apply(null, arguments)
-};
-
-var _DApi_SyncText = Module["_DApi_SyncText"] = function() {
-  return Module["asm"]["_DApi_SyncText"].apply(null, arguments)
-};
-
-var _DApi_SyncTextPtr = Module["_DApi_SyncTextPtr"] = function() {
-  return Module["asm"]["_DApi_SyncTextPtr"].apply(null, arguments)
-};
-
-var _SNet_InitWebsocket = Module["_SNet_InitWebsocket"] = function() {
-  return Module["asm"]["_SNet_InitWebsocket"].apply(null, arguments)
-};
-
-var _SNet_WebsocketStatus = Module["_SNet_WebsocketStatus"] = function() {
-  return Module["asm"]["_SNet_WebsocketStatus"].apply(null, arguments)
+var _DApi_MpqCmp = Module["_DApi_MpqCmp"] = function() {
+  return Module["asm"]["_DApi_MpqCmp"].apply(null, arguments)
 };
 
 var __ZSt18uncaught_exceptionv = Module["__ZSt18uncaught_exceptionv"] = function() {
@@ -2482,116 +2323,24 @@ var ___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = function() {
   return Module["asm"]["___cxa_is_pointer_type"].apply(null, arguments)
 };
 
-var ___em_js___api_close_keyboard = Module["___em_js___api_close_keyboard"] = function() {
-  return Module["asm"]["___em_js___api_close_keyboard"].apply(null, arguments)
+var ___em_js__do_error = Module["___em_js__do_error"] = function() {
+  return Module["asm"]["___em_js__do_error"].apply(null, arguments)
 };
 
-var ___em_js___api_open_keyboard = Module["___em_js___api_open_keyboard"] = function() {
-  return Module["asm"]["___em_js___api_open_keyboard"].apply(null, arguments)
-};
-
-var ___em_js__api_create_sound = Module["___em_js__api_create_sound"] = function() {
-  return Module["asm"]["___em_js__api_create_sound"].apply(null, arguments)
-};
-
-var ___em_js__api_create_sound_float = Module["___em_js__api_create_sound_float"] = function() {
-  return Module["asm"]["___em_js__api_create_sound_float"].apply(null, arguments)
-};
-
-var ___em_js__api_delete_sound = Module["___em_js__api_delete_sound"] = function() {
-  return Module["asm"]["___em_js__api_delete_sound"].apply(null, arguments)
-};
-
-var ___em_js__api_draw_begin = Module["___em_js__api_draw_begin"] = function() {
-  return Module["asm"]["___em_js__api_draw_begin"].apply(null, arguments)
-};
-
-var ___em_js__api_draw_belt = Module["___em_js__api_draw_belt"] = function() {
-  return Module["asm"]["___em_js__api_draw_belt"].apply(null, arguments)
-};
-
-var ___em_js__api_draw_blit = Module["___em_js__api_draw_blit"] = function() {
-  return Module["asm"]["___em_js__api_draw_blit"].apply(null, arguments)
-};
-
-var ___em_js__api_draw_clip_text = Module["___em_js__api_draw_clip_text"] = function() {
-  return Module["asm"]["___em_js__api_draw_clip_text"].apply(null, arguments)
-};
-
-var ___em_js__api_draw_end = Module["___em_js__api_draw_end"] = function() {
-  return Module["asm"]["___em_js__api_draw_end"].apply(null, arguments)
-};
-
-var ___em_js__api_draw_text = Module["___em_js__api_draw_text"] = function() {
-  return Module["asm"]["___em_js__api_draw_text"].apply(null, arguments)
-};
-
-var ___em_js__api_duplicate_sound = Module["___em_js__api_duplicate_sound"] = function() {
-  return Module["asm"]["___em_js__api_duplicate_sound"].apply(null, arguments)
-};
-
-var ___em_js__api_exit_game = Module["___em_js__api_exit_game"] = function() {
-  return Module["asm"]["___em_js__api_exit_game"].apply(null, arguments)
-};
-
-var ___em_js__api_play_sound = Module["___em_js__api_play_sound"] = function() {
-  return Module["asm"]["___em_js__api_play_sound"].apply(null, arguments)
-};
-
-var ___em_js__api_set_cursor = Module["___em_js__api_set_cursor"] = function() {
-  return Module["asm"]["___em_js__api_set_cursor"].apply(null, arguments)
-};
-
-var ___em_js__api_set_volume = Module["___em_js__api_set_volume"] = function() {
-  return Module["asm"]["___em_js__api_set_volume"].apply(null, arguments)
-};
-
-var ___em_js__api_stop_sound = Module["___em_js__api_stop_sound"] = function() {
-  return Module["asm"]["___em_js__api_stop_sound"].apply(null, arguments)
-};
-
-var ___em_js__api_use_websocket = Module["___em_js__api_use_websocket"] = function() {
-  return Module["asm"]["___em_js__api_use_websocket"].apply(null, arguments)
-};
-
-var ___em_js__api_websocket_closed = Module["___em_js__api_websocket_closed"] = function() {
-  return Module["asm"]["___em_js__api_websocket_closed"].apply(null, arguments)
-};
-
-var ___em_js__api_websocket_send = Module["___em_js__api_websocket_send"] = function() {
-  return Module["asm"]["___em_js__api_websocket_send"].apply(null, arguments)
-};
-
-var ___em_js__exit_error = Module["___em_js__exit_error"] = function() {
-  return Module["asm"]["___em_js__exit_error"].apply(null, arguments)
+var ___em_js__do_progress = Module["___em_js__do_progress"] = function() {
+  return Module["asm"]["___em_js__do_progress"].apply(null, arguments)
 };
 
 var ___em_js__get_file_contents = Module["___em_js__get_file_contents"] = function() {
   return Module["asm"]["___em_js__get_file_contents"].apply(null, arguments)
 };
 
-var ___em_js__get_file_size = Module["___em_js__get_file_size"] = function() {
-  return Module["asm"]["___em_js__get_file_size"].apply(null, arguments)
-};
-
 var ___em_js__put_file_contents = Module["___em_js__put_file_contents"] = function() {
   return Module["asm"]["___em_js__put_file_contents"].apply(null, arguments)
 };
 
-var ___em_js__remove_file = Module["___em_js__remove_file"] = function() {
-  return Module["asm"]["___em_js__remove_file"].apply(null, arguments)
-};
-
-var ___em_js__show_alert = Module["___em_js__show_alert"] = function() {
-  return Module["asm"]["___em_js__show_alert"].apply(null, arguments)
-};
-
-var ___em_js__trace_pop = Module["___em_js__trace_pop"] = function() {
-  return Module["asm"]["___em_js__trace_pop"].apply(null, arguments)
-};
-
-var ___em_js__trace_push = Module["___em_js__trace_push"] = function() {
-  return Module["asm"]["___em_js__trace_push"].apply(null, arguments)
+var ___em_js__put_file_size = Module["___em_js__put_file_size"] = function() {
+  return Module["asm"]["___em_js__put_file_size"].apply(null, arguments)
 };
 
 var _emscripten_replace_memory = Module["_emscripten_replace_memory"] = function() {
@@ -2634,10 +2383,6 @@ var establishStackSpace = Module["establishStackSpace"] = function() {
   return Module["asm"]["establishStackSpace"].apply(null, arguments)
 };
 
-var globalCtors = Module["globalCtors"] = function() {
-  return Module["asm"]["globalCtors"].apply(null, arguments)
-};
-
 var stackAlloc = Module["stackAlloc"] = function() {
   return Module["asm"]["stackAlloc"].apply(null, arguments)
 };
@@ -2648,10 +2393,6 @@ var stackRestore = Module["stackRestore"] = function() {
 
 var stackSave = Module["stackSave"] = function() {
   return Module["asm"]["stackSave"].apply(null, arguments)
-};
-
-var dynCall_i = Module["dynCall_i"] = function() {
-  return Module["asm"]["dynCall_i"].apply(null, arguments)
 };
 
 var dynCall_ii = Module["dynCall_ii"] = function() {
@@ -2676,6 +2417,10 @@ var dynCall_iiiii = Module["dynCall_iiiii"] = function() {
 
 var dynCall_iiiiii = Module["dynCall_iiiiii"] = function() {
   return Module["asm"]["dynCall_iiiiii"].apply(null, arguments)
+};
+
+var dynCall_iiiiiii = Module["dynCall_iiiiiii"] = function() {
+  return Module["asm"]["dynCall_iiiiiii"].apply(null, arguments)
 };
 
 var dynCall_ji = Module["dynCall_ji"] = function() {
@@ -2712,22 +2457,6 @@ var dynCall_viiiii = Module["dynCall_viiiii"] = function() {
 
 var dynCall_viiiiii = Module["dynCall_viiiiii"] = function() {
   return Module["asm"]["dynCall_viiiiii"].apply(null, arguments)
-};
-
-var dynCall_viiiiiii = Module["dynCall_viiiiiii"] = function() {
-  return Module["asm"]["dynCall_viiiiiii"].apply(null, arguments)
-};
-
-var dynCall_viiiiiiiii = Module["dynCall_viiiiiiiii"] = function() {
-  return Module["asm"]["dynCall_viiiiiiiii"].apply(null, arguments)
-};
-
-var dynCall_viiiiiiiiii = Module["dynCall_viiiiiiiiii"] = function() {
-  return Module["asm"]["dynCall_viiiiiiiiii"].apply(null, arguments)
-};
-
-var dynCall_viij = Module["dynCall_viij"] = function() {
-  return Module["asm"]["dynCall_viij"].apply(null, arguments)
 };
 
 var dynCall_viji = Module["dynCall_viji"] = function() {
@@ -2982,14 +2711,14 @@ Module['ready'] = new Promise(function (resolve, reject) {
 
 
 
-  return DiabloSpawn
+  return MpqCmp
 }
 );
 })();
 if (typeof exports === 'object' && typeof module === 'object')
-      module.exports = DiabloSpawn;
+      module.exports = MpqCmp;
     else if (typeof define === 'function' && define['amd'])
-      define([], function() { return DiabloSpawn; });
+      define([], function() { return MpqCmp; });
     else if (typeof exports === 'object')
-      exports["DiabloSpawn"] = DiabloSpawn;
+      exports["MpqCmp"] = MpqCmp;
     

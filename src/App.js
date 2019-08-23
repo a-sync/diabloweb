@@ -1,13 +1,18 @@
 import React from 'react';
 import './App.scss';
 import classNames from 'classnames';
+import getPlayerName from './api/savefile';
+
+import { mapStackTrace } from 'sourcemapped-stacktrace';
 
 import create_fs from './fs';
 import load_game from './api/loader';
-import { SpawnSize } from './api/load_spawn';
+import { SpawnSizes } from './api/load_spawn';
 
+window.Peer = Peer;
+import Peer from 'peerjs';
 function reportLink(e, retail) {
-  const message = e.stack || e.message || "Unknown error";
+  const message = (e.message || "Unknown error") + (e.stack ? "\n" + e.stack : "");
   const url = new URL("https://github.com/d07RiV/diabloweb/issues/new");
   url.searchParams.set("body",
 `**Description:**
@@ -19,6 +24,13 @@ DiabloWeb ${process.env.VERSION} (${retail ? 'Retail' : 'Shareware'})
 **Error message:**
     
 ${message.split("\n").map(line => "    " + line).join("\n")}
+
+**User agent:**
+
+    ${navigator.userAgent}
+
+**Save file:**
+[Please attach the save file, if applicable. The error box should have a link to download the current save you were playing; alternatively, you can open dev console on the game page (F12) and type in ${"`DownloadSaves()`"}]
 `);
   return url.toString();
 }
@@ -51,17 +63,38 @@ const TOUCH_MOVE = 0;
 const TOUCH_RMB = 1;
 const TOUCH_SHIFT = 2;
 
+function findKeyboardRule() {
+  for (let sheet of document.styleSheets) {
+    for (let rule of sheet.cssRules) {
+      if (rule.type === CSSRule.MEDIA_RULE && rule.conditionText === '(min-aspect-ratio: 3/1)') {
+        for (let sub of rule.cssRules) {
+          if (sub.selectorText === '.App.keyboard .Body .inner') {
+            return sub;
+          }
+        }
+      }
+    }
+  }
+}
+let keyboardRule = null;
+try {
+  keyboardRule = findKeyboardRule();
+} catch (e) {
+}
+
 const Link = ({children, ...props}) => <a target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
 
 class App extends React.Component {
   files = new Map();
-  state = {started: false, loading: false, touch: false, dropping: 0, has_spawn: false};
+  state = {started: false, loading: false, dropping: 0, has_spawn: false};
   cursorPos = {x: 0, y: 0};
 
+  touchControls = false;
   touchButtons = [null, null, null, null, null, null];
   touchCtx = [null, null, null, null, null, null];
   touchMods = [false, false, false, false, false, false];
   touchBelt = [-1, -1, -1, -1, -1, -1];
+  maxKeyboard = 0;
 
   fs = create_fs(true);
 
@@ -84,9 +117,10 @@ class App extends React.Component {
 
     this.fs.then(fs => {
       const spawn = fs.files.get('spawn.mpq');
-      if (spawn && spawn.byteLength === SpawnSize) {
+      if (spawn && SpawnSizes.includes(spawn.byteLength)) {
         this.setState({has_spawn: true});
       }
+      this.updateSaves();
     });
   }
 
@@ -115,18 +149,42 @@ class App extends React.Component {
   }
 
   onError(message, stack) {
-    this.setState(({error}) => !error && {error: {message, stack}});
+    (async () => {
+      const errorObject = {message};
+      if (this.saveName) {
+        errorObject.save = await (await this.fs).fileUrl(this.saveName);
+      }
+      if (stack) {
+        mapStackTrace(stack, stack => {
+          this.setState(({error}) => !error && {error: {...errorObject, stack: stack.join("\n")}});
+        });
+      } else {
+        this.setState(({error}) => !error && {error: errorObject});
+      }
+    })();
   }
 
-  openKeyboard(open) {
-    if (open) {
-      this.showKeyboard = true;
+  openKeyboard(rect) {
+    if (rect) {
+      this.showKeyboard = {
+        left: `${(100 * (rect[0] - 10) / 640).toFixed(2)}%`,
+        top: `${(100 * (rect[1] - 10) / 480).toFixed(2)}%`,
+        width: `${(100 * (rect[2] - rect[0] + 20) / 640).toFixed(2)}%`,
+        height: `${(100 * (rect[3] - rect[1] + 20) / 640).toFixed(2)}%`,
+      };
+      this.maxKeyboard = rect[4];
       this.element.classList.add("keyboard");
+      Object.assign(this.keyboard.style, this.showKeyboard);
       this.keyboard.focus();
+      if (keyboardRule) {
+        keyboardRule.style.transform = `translate(-50%, ${(-(rect[1] + rect[3]) * 56.25 / 960).toFixed(2)}vw)`;
+      }
     } else {
       this.showKeyboard = false;
       this.element.classList.remove("keyboard");
       this.keyboard.blur();
+      this.keyboard.value = "";
+      this.keyboardNum = 0;
     }
   }
 
@@ -154,10 +212,29 @@ class App extends React.Component {
   setCurrentSave(name) {
     this.saveName = name;
   }
-  downloadSave = e => {
-    this.fs.then(fs => this.saveName && fs.download(this.saveName));
-    e.stopPropagation();
-    e.preventDefault();
+
+  updateSaves() {
+    this.fs.then(fs => {
+      const saves = [];
+      [...fs.files.keys()].filter(name => name.match(/\.sv$/i)).forEach(name => {
+        saves.push(name);
+        console.log(name, getPlayerName(fs.files.get(name).buffer));
+      });
+      this.setState({save_names: saves});
+    });
+  }
+  removeSave(name) {
+    if (window.confirm(`Are you sure you want to delete ${name}?`)) {
+      (async () => {
+        const fs = await this.fs;
+        await fs.delete(name.toLowerCase());
+        fs.files.delete(name.toLowerCase());
+        this.updateSaves();
+      })();
+    }
+  }
+  downloadSave(name) {
+    this.fs.then(fs => fs.download(name));
   }
 
   drawBelt(idx, slot) {
@@ -196,7 +273,16 @@ class App extends React.Component {
 
   start(file) {
     if (file && file.name.match(/\.sv$/i)) {
-      this.fs.then(fs => fs.upload(file)).then(console.log(`Updated ${file.name}`));
+      this.fs.then(fs => fs.upload(file)).then(() => {
+        this.updateSaves();
+      });
+      return;
+    }
+    if (this.state.show_saves) {
+      return;
+    }
+    if (file && !file.name.match(/\.mpq$/i)) {
+      window.alert('Please select an MPQ file. If you downloaded the installer from GoG, you will need to install it on PC and use the MPQ file from the installation folder.');
       return;
     }
 
@@ -210,7 +296,7 @@ class App extends React.Component {
 
     this.setState({loading: true, retail});
 
-    load_game(this, file).then(game => {
+    load_game(this, file, !retail).then(game => {
       this.game = game;
 
       document.addEventListener('mousemove', this.onMouseMove, true);
@@ -225,7 +311,6 @@ class App extends React.Component {
       document.addEventListener('touchend', this.onTouchEnd, {passive: false, capture: true});
 
       document.addEventListener('pointerlockchange', this.onPointerLockChange);
-      document.addEventListener('fullscreenchange', this.onFullscreenChange);
       window.addEventListener('resize', this.onResize);
 
       this.setState({started: true});
@@ -285,6 +370,13 @@ class App extends React.Component {
 
   onMouseDown = e => {
     if (!this.canvas) return;
+    if (e.target === this.keyboard) {
+      return;
+    }
+    if (this.touchControls) {
+      this.touchControls = false;
+      this.element.classList.remove("touch");
+    }
     const {x, y} = this.mousePos(e);
     if (window.screen && window.innerHeight === window.screen.height) {
       // we're in fullscreen, let's get pointer lock!
@@ -298,20 +390,27 @@ class App extends React.Component {
 
   onMouseUp = e => {
     if (!this.canvas) return;
+    if (e.target === this.keyboard) {
+      //return;
+    }
     const {x, y} = this.mousePos(e);
     this.game("DApi_Mouse", 2, this.mouseButton(e), this.eventMods(e), x, y);
-    e.preventDefault();
+    if (e.target !== this.keyboard) {
+      e.preventDefault();
+    }
   }
 
   onKeyDown = e => {
     if (!this.canvas) return;
     this.game("DApi_Key", 0, this.eventMods(e), e.keyCode);
-    if (e.keyCode >= 32 && e.key.length === 1 && !this.showKeyboard) {
+    if (!this.showKeyboard && (e.keyCode >= 32 && e.key.length === 1)) {
       this.game("DApi_Char", e.key.charCodeAt(0));
+    } else if (e.keyCode === 8 || e.keyCode === 13) {
+      this.game("DApi_Char", e.keyCode);
     }
     this.clearKeySel();
     if (!this.showKeyboard) {
-      if (e.keyCode === 8 || (e.keyCode >= 112 && e.keyCode <= 119)) {
+      if (e.keyCode === 8 || e.keyCode === 9 || (e.keyCode >= 112 && e.keyCode <= 119)) {
         e.preventDefault();
       }
     }
@@ -334,17 +433,31 @@ class App extends React.Component {
     }
   }
 
-  onKeyboard = () => {
+  onKeyboardInner(flags) {
     if (this.showKeyboard) {
       const text = this.keyboard.value;
-      const valid = (text.match(/[\x20-\x7E]/g) || []).join("").substring(0, 15);
+      let valid;
+      if (this.maxKeyboard > 0) {
+        valid = (text.match(/[\x20-\x7E]/g) || []).join("").substring(0, this.maxKeyboard);
+      } else {
+        const maxValue = -this.maxKeyboard;
+        if (text.match(/^\d*$/)) {
+          this.keyboardNum = Math.min(text.length ? parseInt(text) : 0, maxValue);
+        }
+        valid = (this.keyboardNum ? this.keyboardNum.toString() : "");
+      }
       if (text !== valid) {
         this.keyboard.value = valid;
       }
       this.clearKeySel();
-      const values = [...Array(15)].map((_, i) => i < valid.length ? valid.charCodeAt(i) : 0);
-      this.game("DApi_SyncText", ...values);
+      this.game("text", valid, flags);
     }
+  }
+  onKeyboard = () => {
+    this.onKeyboardInner(0);
+  }
+  onKeyboardBlur = () => {
+    this.onKeyboardInner(1);
   }
 
   parseFile = e => {
@@ -354,12 +467,15 @@ class App extends React.Component {
     }
   }
 
+  parseSave = e => {
+    const files = e.target.files;
+    if (files.length > 0) {
+      this.start(files[0]);
+    }
+  }
+
   touchButton = null;
   touchCanvas = null;
-
-  onFullscreenChange = () => {
-    this.setState({touch: (document.fullscreenElement === this.element)});
-  }
 
   setTouchMod(index, value, use) {
     if (index < 3) {
@@ -378,6 +494,10 @@ class App extends React.Component {
 
   updateTouchButton(touches, release) {
     let touchOther = null;
+    if (!this.touchControls) {
+      this.touchControls = true;
+      this.element.classList.add("touch");
+    }
     const btn = this.touchButton;
     for (let {target, identifier, clientX, clientY} of touches) {
       if (btn && btn.id === identifier && this.touchButtons[btn.index] === target) {
@@ -453,6 +573,11 @@ class App extends React.Component {
 
   onTouchStart = e => {
     if (!this.canvas) return;
+    if (e.target === this.keyboard) {
+      return;
+    } else {
+      this.keyboard.blur();
+    }
     e.preventDefault();
     if (this.updateTouchButton(e.touches, false)) {
       const {x, y} = this.mousePos(this.touchCanvas);
@@ -464,6 +589,9 @@ class App extends React.Component {
   }
   onTouchMove = e => {
     if (!this.canvas) return;
+    if (e.target === this.keyboard) {
+      return;
+    }
     e.preventDefault();
     if (this.updateTouchButton(e.touches, false)) {
       const {x, y} = this.mousePos(this.touchCanvas);
@@ -472,7 +600,11 @@ class App extends React.Component {
   }
   onTouchEnd = e => {
     if (!this.canvas) return;
-    e.preventDefault();
+    if (e.target === this.keyboard) {
+      //return;
+    } else {
+      e.preventDefault();
+    }
     const prevTc = this.touchCanvas;
     this.updateTouchButton(e.touches, true);
     if (prevTc && !this.touchCanvas) {
@@ -481,7 +613,7 @@ class App extends React.Component {
       this.game("DApi_Mouse", 2, 2, this.eventMods(e), x, y);
 
       if (this.touchMods[TOUCH_RMB] && (!this.touchButton || this.touchButton.index !== TOUCH_RMB)) {
-        this.setTouchButton(TOUCH_RMB, false);
+        this.setTouchMod(TOUCH_RMB, false);
       }
     }
     if (!document.fullscreenElement) {
@@ -509,9 +641,31 @@ class App extends React.Component {
   }
 
   render() {
-    const {started, loading, error, progress, dropping, touch, has_spawn} = this.state;
+    const {started, loading, error, progress, dropping, has_spawn, save_names, show_saves} = this.state;
+    if (show_saves && save_names) {
+      return (
+        <div className={classNames("App", {touch: this.touchControls, started, dropping, keyboard: !!this.showKeyboard})} ref={this.setElement}>
+          <div className="BodyV">
+            <div className="start">
+              <ul className="saveList">
+                {save_names.map(name => <li key={name}>
+                  {name}
+                  <FontAwesomeIcon className="btnDownload" icon={faDownload} onClick={() => this.downloadSave(name)}/>
+                  <FontAwesomeIcon className="btnRemove" icon={faTimes} onClick={() => this.removeSave(name)}/>
+                </li>)}
+              </ul>
+              <form>
+                <label htmlFor="loadFile" className="startButton">Upload Save</label>
+                <input accept=".sv" type="file" id="loadFile" style={{display: "none"}} onChange={this.parseSave}/>
+              </form>
+              <span className="startButton" onClick={() => this.setState({show_saves: false})}>Back</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
     return (
-      <div className={classNames("App", {touch, started, dropping, keyboard: this.showKeyboard})} ref={this.setElement}>
+      <div className={classNames("App", {touch: this.touchControls, started, dropping, keyboard: !!this.showKeyboard})} ref={this.setElement}>
         <div className="touch-ui touch-mods">
           <div className={classNames("touch-button", "touch-button-0", {active: this.touchMods[0]})} ref={this.setTouch0}/>
           <div className={classNames("touch-button", "touch-button-1", {active: this.touchMods[1]})} ref={this.setTouch1}/>
@@ -523,8 +677,10 @@ class App extends React.Component {
           <div className={classNames("touch-button", "touch-button-2")} ref={this.setTouch5}/>
         </div>
         <div className="Body">
-          {!error && <canvas ref={this.setCanvas} width={640} height={480}/>}
-          <input type="text" className="keyboard" onChange={this.onKeyboard} ref={this.setKeyboard} spellCheck={false}/>
+          <div className="inner">
+            {!error && <canvas ref={this.setCanvas} width={640} height={480}/>}
+            <input type="text" className="keyboard" onChange={this.onKeyboard} onBlur={this.onKeyboardBlur} ref={this.setKeyboard} spellCheck={false} style={this.showKeyboard || {}}/>
+          </div>
         </div>
         <div className="BodyV">
           {!!error && (
@@ -532,7 +688,7 @@ class App extends React.Component {
               <p className="header">The following error has occurred:</p>
               <p className="body">{error.message}</p>
               <p className="footer">Click to create an issue on GitHub</p>
-              {this.saveName != null && <p className="link" onClick={this.downloadSave}>Download save file</p>}
+              {error.save != null && <a href={error.save} download={this.saveName}>Download save file</a>}
             </Link>
           )}
           {!!loading && !started && !error && (
@@ -546,6 +702,7 @@ class App extends React.Component {
           {!started && !loading && !error && (
             <div className="start">
               <span className="startButton" onClick={() => this.start()}>Start</span>
+              {!!(save_names && save_names.length) && <span className="startButton" onClick={() => this.setState({show_saves: true})}>Manage Saves</span>}
             </div>
           )}
         </div>

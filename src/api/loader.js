@@ -2,6 +2,7 @@ import Worker from './game.worker.js';
 import init_sound from './sound';
 import load_spawn from './load_spawn';
 import load_diabdat from './load_diabdat';
+import webrtc_open from './webrtc';
 
 function onRender(api, ctx, {bitmap, images, text, clip, belt}) {
   if (bitmap) {
@@ -37,6 +38,9 @@ function onRender(api, ctx, {bitmap, images, text, clip, belt}) {
 
 function testOffscreen() {
   return false;
+  // This works but I couldn't see any performance difference, and support for 2D canvas in workers is very poor.
+  // In this mode, instead of sending a batch of areas to draw back to the main thread, the worker does all drawing on its own and sends a complete bitmap object back.
+  // However, this effectively clears the worker's canvas, so we need to redraw the whole frame every time, which defeats the performance gained from reduced copying.
   /*try {
     const canvas = document.createElement("canvas");
     const offscreen = canvas.transferControlToOffscreen();
@@ -47,23 +51,12 @@ function testOffscreen() {
   }*/
 }
 
-async function do_load_game(api, audio, mpq) {
+async function do_load_game(api, audio, mpq, spawn) {
   const fs = await api.fs;
-  let spawn = true;
-  if (mpq) {
-    if (!mpq.name.match(/^spawn\.mpq$/i)) {
-      spawn = false;
-      fs.files.delete('spawn.mpq');
-    }
+  if (spawn && !mpq) {
+    await load_spawn(api, fs);
   } else {
     await load_diabdat(api, fs);
-
-    if (fs.files.get('diabdat.mpq')) {
-      spawn = false;
-      fs.files.delete('spawn.mpq');
-    } else {
-      await load_spawn(api, fs);
-    }
   }
 
   let context = null, offscreen = false;
@@ -76,6 +69,12 @@ async function do_load_game(api, audio, mpq) {
   return await new Promise((resolve, reject) => {
     try {
       const worker = new Worker();
+
+      let packetQueue = [];
+      const webrtc = webrtc_open(data => {
+        packetQueue.push(data);
+      });
+
       worker.addEventListener("message", ({data}) => {
         switch (data.action) {
         case "loaded":
@@ -99,13 +98,14 @@ async function do_load_game(api, audio, mpq) {
           api.setCursorPos(data.x, data.y);
           break;
         case "keyboard":
-          api.openKeyboard(data.open);
+          api.openKeyboard(data.rect);
           break;
         case "error":
+          audio.stop_all();
           api.onError(data.error, data.stack);
           break;
         case "failed":
-          reject(Error(data.stack || data.error));
+          reject({message: data.error, stack: data.stack});
           break;
         case "progress":
           api.onProgress({text: data.text, loaded: data.loaded, total: data.total});
@@ -116,14 +116,28 @@ async function do_load_game(api, audio, mpq) {
         case "current_save":
           api.setCurrentSave(data.name);
           break;
+          case "packet":
+          webrtc.send(data.buffer);
+          break;
+        case "packetBatch":
+          for (let packet of data.batch) {
+            webrtc.send(packet);
+          }
+          break;
         default:
         }
-      });
+      });          
       const transfer= [];
       for (let [, file] of fs.files) {
         transfer.push(file.buffer);
       }
       worker.postMessage({action: "init", files: fs.files, mpq, spawn, offscreen}, transfer);
+      setInterval(() => {
+        if (packetQueue.length) {
+          worker.postMessage({action: "packetBatch", batch: packetQueue}, packetQueue);
+          packetQueue.length = 0;
+        }
+      }, 20);
       delete fs.files;
     } catch (e) {
       reject(e);
@@ -131,7 +145,7 @@ async function do_load_game(api, audio, mpq) {
   });
 }
 
-export default function load_game(api, mpq) {
+export default function load_game(api, mpq, spawn) {
   const audio = init_sound();
-  return do_load_game(api, audio, mpq);
+  return do_load_game(api, audio, mpq, spawn);
 }
