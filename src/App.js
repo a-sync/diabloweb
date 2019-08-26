@@ -309,7 +309,7 @@ class App extends React.Component {
     document.removeEventListener("dragleave", this.onDragLeave, true);
     this.setState({dropping: 0});
 
-    const retail = !!(file && !file.name.match(/^spawn\.mpq$/i));
+    const retail = true;
 
     this.setState({loading: true, retail});
 
@@ -702,25 +702,7 @@ class App extends React.Component {
     } else if (!started) {
       return (
         <div className="start">
-          <p>
-            This is a web port of the original Diablo game, based on source code reconstructed by
-            GalaXyHaXz and devilution team. The project page with information and links can be found over here <Link href="https://github.com/d07RiV/diabloweb">https://github.com/d07RiV/diabloweb</Link>
-          </p>
-          <p>
-            If you own the original game, you can drop the original DIABDAT.MPQ onto this page or click the button below to start playing.
-            The game can be purchased from <Link href="https://www.gog.com/game/diablo">GoG</Link>.
-            {" "}<span className="link" onClick={() => this.setState({compress: true})}>Click here to compress the MPQ, greatly reducing its size.</span>
-          </p>
-          {!has_spawn && (
-            <p>
-              Or you can play the shareware version for free (50MB download).
-            </p>
-          )}
-          <form>
-            <label htmlFor="loadFile" className="startButton">Select MPQ</label>
-            <input accept=".mpq" type="file" id="loadFile" style={{display: "none"}} onChange={this.parseFile}/>
-          </form>
-          <div className="startButton" onClick={() => this.start()}>Play Shareware</div>
+          <div className="startButton" onClick={() => this.start()}>Play</div>
           {!!save_names && <div className="startButton" onClick={this.showSaves}>Manage Saves</div>}
         </div>
       );
